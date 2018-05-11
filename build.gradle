@@ -1,0 +1,85 @@
+plugins {
+    id 'idea'
+    id "com.github.hierynomus.license" version "0.12.1"
+}
+
+repositories {
+    mavenCentral()
+}
+
+ext {
+    copperVersion = '5.0.0-alpha1'
+}
+
+apply plugin: 'application'
+apply plugin: 'java-library'
+apply plugin: 'eclipse'
+apply plugin: 'idea'
+apply plugin: 'com.github.hierynomus.license'
+
+sourceCompatibility = 10
+targetCompatibility = 10
+
+def defaultEncoding = 'UTF-8'
+[compileJava, compileTestJava]*.options*.encoding = defaultEncoding
+
+sourceSets {
+    workflow {
+        ext.srcDir = "$projectDir/src/workflow/java"
+    }
+}
+sourceSets.main.java.srcDirs += sourceSets.workflow.srcDir
+
+license {
+    header rootProject.file("license-header.txt")
+    skipExistingHeaders true
+    ignoreFailures false
+}
+
+dependencies {
+    compile "org.copper-engine:copper-coreengine:$copperVersion"
+    compile "org.copper-engine:copper-jmx-interface:$copperVersion"
+
+    compile 'org.asynchttpclient:async-http-client:2.4.5'
+    compile 'com.fasterxml.jackson.core:jackson-core:2.9.5'
+    compile 'com.fasterxml.jackson.core:jackson-databind:2.9.5'
+
+    compile 'org.slf4j:slf4j-api:1.7.25'
+    compile 'ch.qos.logback:logback-classic:1.2.3'
+
+}
+
+jar {
+    manifest {
+        attributes 'Implementation-Title': "copper-demo-jpms",
+                'Main-Class': 'org.copperengine.demo.jpms.TeamCreationMain'
+    }
+}
+mainClassName = 'org.copperengine.demo.jpms.TeamCreationMain'
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+task javadocJar(type: Jar, dependsOn: classes) {
+    classifier "javadoc"
+    from javadoc
+}
+
+artifacts {
+    archives(sourcesJar, javadocJar)
+}
+
+javadoc {
+    options.addStringOption('-module-path', classpath.asPath)
+}
+
+compileJava {
+    options.compilerArgs = ['--module-path', classpath.asPath]
+    classpath = files()
+}
+
+tasks.withType(Javadoc) {
+    options.addBooleanOption 'html5', true
+}

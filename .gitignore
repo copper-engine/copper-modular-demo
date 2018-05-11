@@ -1,22 +1,25 @@
-# Compiled class file
+# directory names ending with / will be excluded from all IDEA modules (see ide.gradle)
+
+gradle-local.properties
+gpg/
+.gradle/
+build/
 *.class
-
-# Log file
 *.log
+*.settings.xml
 
-# BlueJ files
-*.ctxt
+# Eclipse
+.classpath
+.project
+.settings/
+bin/
 
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
+# IDEA
+*.iml
+*.ipr
+*.iws
+.idea/
+out/
 
-# Package Files #
-*.jar
-*.war
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
+_ignore*
