@@ -38,7 +38,7 @@ public class TeamCreationMain {
 	}
 
 	private void runWithDependencyInjector(DependencyInjector dependencyInjector) throws InterruptedException {
-		// initialize the procession engine the default configuration and source directory for the workflow files
+		// create the processing engine; configure the directory containing workflow source files and the dependency injector
 		var factory = new TransientEngineFactory() {
 			@Override
 			protected File getWorkflowSourceDirectory() {
