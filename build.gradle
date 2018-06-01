@@ -316,13 +316,14 @@ def jlink(File modjarsDir) {
 
 def adjustStartScripts() {
     ["$launcherName", "${launcherName}.bat"].each { script ->
-        def scriptFile = file("$imageDirPath/bin/$script")
-        def newText = scriptFile.text
-        newText = newText.replace('JLINK_VM_OPTIONS=',
-                'JLINK_VM_OPTIONS=-Dio.netty.tryReflectionSetAccessible=false -Dlogback.configurationFile=./logback.xml -Djava.util.logging.config.file="logging.properties" -Dfile.encoding=UTF-8')
-        if(script.endsWith('.bat')) {
-            // temporary set codepage 65001 in order to be able to use UTF-8 encoding
-            newText = newText.replace('@echo off', '''
+        def scriptFile = new File("$imageDirPath/bin/$script")
+        if(scriptFile.file) {
+            def newText = scriptFile.text
+            newText = newText.replace('JLINK_VM_OPTIONS=',
+                    'JLINK_VM_OPTIONS=-Dio.netty.tryReflectionSetAccessible=false -Dlogback.configurationFile=./logback.xml -Djava.util.logging.config.file="logging.properties" -Dfile.encoding=UTF-8')
+            if(script.endsWith('.bat')) {
+                // temporary set codepage 65001 in order to be able to use UTF-8 encoding
+                newText = newText.replace('@echo off', '''
                 @echo off
                 setlocal ENABLEDELAYEDEXPANSION
                 for /F "tokens=* USEBACKQ" %%F in (`chcp`) do (set ORIGINAL_CODEPAGE=%%F)
@@ -330,9 +331,10 @@ def adjustStartScripts() {
                 set ORIGINAL_CODEPAGE=%ORIGINAL_CODEPAGE:.=%
                 chcp 65001 > nul
             '''.stripIndent())
-            newText += '\nchcp %ORIGINAL_CODEPAGE% > nul\n'
+                newText += '\nchcp %ORIGINAL_CODEPAGE% > nul\n'
+            }
+            scriptFile.newWriter().withWriter {w -> w << newText}
         }
-        scriptFile.newWriter().withWriter {w -> w << newText}
     }
 }
 
