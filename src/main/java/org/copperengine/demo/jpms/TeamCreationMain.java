@@ -17,23 +17,31 @@ package org.copperengine.demo.jpms;
 
 import org.copperengine.core.CopperException;
 import org.copperengine.core.DependencyInjector;
+import org.copperengine.core.common.DefaultTicketPoolManager;
+import org.copperengine.core.common.TicketPool;
+import org.copperengine.core.common.TicketPoolManager;
 import org.copperengine.core.tranzient.TransientEngineFactory;
 import org.copperengine.core.tranzient.TransientScottyEngine;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.util.Collections;
 import java.util.Random;
 
 public class TeamCreationMain {
     private static final Logger logger = LoggerFactory.getLogger(TeamCreationMain.class);
-    private static int NUMBER_OF_WORKFLOWS = 5000;
+    private static int NUMBER_OF_WORKFLOWS = 200;
 
     private TransientScottyEngine engine;
     private final Random rnd = new Random();
 
 	public static void main(String[] args) throws Exception {
-        new TeamCreationMain().runWithDependencyInjector(new DefaultDependencyInjector());
+	    long delayMillis = 50;
+	    if(args.length > 0) {
+	        delayMillis = Long.parseLong(args[0]);
+        }
+        new TeamCreationMain().runWithDependencyInjector(new DefaultDependencyInjector(delayMillis));
 	    System.exit(0);
 	}
 
@@ -47,6 +55,13 @@ public class TeamCreationMain {
             @Override
             protected DependencyInjector createDependencyInjector() {
                 return dependencyInjector;
+            }
+
+            @Override
+            protected TicketPoolManager createTicketPoolManager() {
+                DefaultTicketPoolManager tpManager = new DefaultTicketPoolManager();
+                tpManager.setTicketPools(Collections.singletonList(new TicketPool(DefaultTicketPoolManager.DEFAULT_POOL_ID, NUMBER_OF_WORKFLOWS)));
+                return tpManager;
             }
         };
 
@@ -64,9 +79,10 @@ public class TeamCreationMain {
                 logger.error("copper error: ", e);
             }
         }
+        logger.info("Running {} workflows...", NUMBER_OF_WORKFLOWS);
 
         // wait for all workflow instances to finish
-        int oldRemaining = -1;
+        int oldRemaining = NUMBER_OF_WORKFLOWS;
         int remaining = engine.getNumberOfWorkflowInstances();
         while(remaining > 0) {
             if(remaining != oldRemaining) {

@@ -51,4 +51,9 @@ public class Person implements Serializable {
     public String getFullName() {
         return firstName + " " + lastName;
     }
+
+    @Override
+    public String toString() {
+        return firstName + " " + lastName + " (" + location + ")";
+    }
 }

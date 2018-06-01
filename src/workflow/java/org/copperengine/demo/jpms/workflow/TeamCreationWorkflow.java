@@ -48,7 +48,10 @@ public class TeamCreationWorkflow extends Workflow<TeamCreationRequest> {
         // retrieve the team leader
         Response<Person> leaderResponse = getAndRemoveResponse(leaderCorrelationId);
         var leader = fromResponse(leaderResponse, "leader", leaderCorrelationId);
-        if(leader == null) return;
+        if(leader == null) {
+            logger.warn("Failed to create leader with correlationId: {}", leaderCorrelationId);
+            return;
+        }
 
         // best practice: set variables that are no longer needed to null in order to reduce the footprint
         leaderCorrelationId = null;
@@ -75,7 +78,9 @@ public class TeamCreationWorkflow extends Workflow<TeamCreationRequest> {
         }
 
         // display the created team
-        if(!members.isEmpty()) {
+        if(members.isEmpty()) {
+            logger.warn("Failed to create members for the team of: {} from {}", leader.getFullName(), leader.getLocation());
+        } else {
             logger.info("Team of {} from {}: {}", leader.getFullName(), leader.getLocation(),
                     members.stream().map(Person::getFullName).collect(Collectors.joining(", ")));
         }

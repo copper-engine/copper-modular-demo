@@ -19,8 +19,8 @@ import org.copperengine.core.Workflow;
 import org.copperengine.core.util.PojoDependencyInjector;
 
 public class DefaultDependencyInjector extends PojoDependencyInjector {
-    public DefaultDependencyInjector() {
-        this.register("adapter", new TeamCreationAdapterImpl());
+    public DefaultDependencyInjector(long delayMillis) {
+        this.register("adapter", new TeamCreationAdapterImpl(delayMillis));
     }
 
     @Override

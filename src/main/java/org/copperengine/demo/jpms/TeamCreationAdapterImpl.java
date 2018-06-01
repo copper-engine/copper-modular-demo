@@ -15,18 +15,30 @@
  */
 package org.copperengine.demo.jpms;
 
-import java.util.concurrent.atomic.AtomicLong;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.asynchttpclient.AsyncCompletionHandler;
 import org.asynchttpclient.AsyncHttpClient;
-import org.asynchttpclient.*;
+import org.asynchttpclient.Response;
 import org.copperengine.core.Acknowledge;
 import org.copperengine.core.ProcessingEngine;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import static org.asynchttpclient.Dsl.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
+
+import static org.asynchttpclient.Dsl.asyncHttpClient;
+import static org.asynchttpclient.Dsl.config;
 
 public class TeamCreationAdapterImpl implements TeamCreationAdapter {
+    private static final Logger logger = LoggerFactory.getLogger(TeamCreationAdapterImpl.class);
     private static final AtomicLong correlationIdCounter = new AtomicLong();
+
+    private final long delayMillis;
+    private long lastScheduledStart;
+    private ScheduledExecutorService svc = Executors.newScheduledThreadPool(1000);
 
     private final AsyncHttpClient client = asyncHttpClient(config());
     private ProcessingEngine engine;
@@ -40,19 +52,24 @@ public class TeamCreationAdapterImpl implements TeamCreationAdapter {
 
         @Override
         public Person onCompleted(Response response) {
-            Person leader = null;
+            Person person = null;
             Exception exc = null;
             try {
-                leader = getPerson(response);
+                person = getPerson(response);
             } catch (Exception e) {
                 exc = e;
             }
-            var copperResp = new org.copperengine.core.Response<>(correlationId, leader, exc);
+            var copperResp = new org.copperengine.core.Response<>(correlationId, person, exc);
             var ack = new Acknowledge.DefaultAcknowledge();
+            logger.debug("notifying: {}", person);
             engine.notify(copperResp, ack);
             ack.waitForAcknowledge();
-            return leader;
+            return person;
         }
+    }
+
+    public TeamCreationAdapterImpl(long delayMillis) {
+        this.delayMillis = delayMillis;
     }
 
     public void setEngine(ProcessingEngine engine) {
@@ -71,9 +88,24 @@ public class TeamCreationAdapterImpl implements TeamCreationAdapter {
         return asyncCreatePerson(url);
     }
 
+    private void schedule(Runnable action) {
+        long delay;
+        synchronized (this) {
+            long currTime = System.currentTimeMillis();
+            lastScheduledStart = (lastScheduledStart == 0) ? currTime : lastScheduledStart + delayMillis;
+            delay = Math.max(0, lastScheduledStart - currTime);
+        }
+        logger.trace("Scheduling action with delay: {} ms.", delay);
+        svc.schedule(action, delay, TimeUnit.MILLISECONDS);
+    }
+
     private String asyncCreatePerson(String url) {
         String correlationId = createCorrelationId();
-        client.prepareGet(url).execute(new PersonHandler(correlationId));
+        schedule(() -> {
+                logger.trace("Getting url: {}", url);
+                client.prepareGet(url).execute(new PersonHandler(correlationId));
+            }
+        );
         return correlationId;
     }
 
