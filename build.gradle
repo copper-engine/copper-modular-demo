@@ -170,15 +170,15 @@ ext {
     javaHome = System.getenv('JAVA_HOME')
     sep = File.pathSeparatorChar
     launcherName = 'copper-modular-demo'
-
     mergedModuleName = 'de.scoopgmbh.module.merged'
-    nonModularJarsDirPath = "$buildDir/nonmodjars"
-    mergedJarsDirPath = "$buildDir/mergedjars"
-    jlinkJarsDirPath = "$buildDir/jlinkjars"
-    tmpJarsDirPath = "$buildDir/tmpjars"
-    tmpModuleInfoDirPath = "$buildDir/tmpmodinfo"
-    imageDirPath = "$buildDir/image"
 
+    jlinkBasePath = "$buildDir/jlinkbase"
+    nonModularJarsDirPath = "$jlinkBasePath/nonmodjars"
+    mergedJarsDirPath = "$jlinkBasePath/mergedjars"
+    jlinkJarsDirPath = "$jlinkBasePath/jlinkjars"
+    tmpJarsDirPath = "$jlinkBasePath/tmpjars"
+    tmpModuleInfoDirPath = "$jlinkBasePath/tmpmodinfo"
+    imageDirPath = "$buildDir/image"
 }
 
 def copyRuntimeJars() {
@@ -336,9 +336,10 @@ def adjustStartScripts() {
     }
 }
 
-task jlink(dependsOn: [clean, jar], description: 'Creates modular runtime image with jlink') {
+task jlink(dependsOn: jar, description: 'Creates modular runtime image with jlink') {
     group = 'build'
     doLast {
+        delete(imageDirPath, jlinkBasePath)
         copyRuntimeJars()
         createMergedModule(new File(nonModularJarsDirPath).listFiles() as List)
         createDelegatedModules()
