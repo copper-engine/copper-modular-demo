@@ -1,9 +1,7 @@
-import java.util.jar.JarFile
-import java.util.zip.ZipFile
-
 plugins {
     id 'idea'
     id "com.github.hierynomus.license" version "0.12.1"
+    id "org.beryx.jlink" version "1.0.0"
 }
 
 repositories {
@@ -13,6 +11,8 @@ repositories {
 ext {
     copperVersion = '5.0.0-alpha2'
     moduleName = 'org.copperengine.demo.jpms'
+    launcherName = 'copper-modular-demo'
+    imageDirPath = "$buildDir/image"
 }
 
 apply plugin: 'application'
@@ -55,13 +55,13 @@ dependencies {
     runtime 'org.eclipse.jdt:ecj:3.13.102'
 }
 
+mainClassName = 'org.copperengine.demo.jpms.TeamCreationMain'
 jar {
     manifest {
         attributes 'Implementation-Title': "copper-demo-jpms",
-                'Main-Class': 'org.copperengine.demo.jpms.TeamCreationMain'
+                'Main-Class': mainClassName
     }
 }
-mainClassName = 'org.copperengine.demo.jpms.TeamCreationMain'
 
 task sourcesJar(type: Jar, dependsOn: classes) {
     classifier = 'sources'
@@ -91,227 +91,33 @@ tasks.withType(Javadoc) {
 }
 
 
-
-
-// --------------------------------- JLINK --------------------------------------------
-
-boolean hasModuleInfo(File f) {
-    new ZipFile(f).entries().any {it.name == 'module-info.class'}
-}
-
-String getModuleName(File f) {
-    def modName = new JarFile(f).getManifest()?.mainAttributes.getValue('Automatic-Module-Name')
-    if(modName) return modName
-    def s = f.name
-    def tokens = s.split('-[0-9]')
-    if(tokens.length < 2) return s - '.jar'
-    def len = s.length()
-    return s.substring(0, len - tokens[-1].length() - 2).replace('-', '.')
-}
-
-Collection<File> getNonModularJars(File[] allJars) {
-    allJars.findAll {!hasModuleInfo(it)}
-}
-
-File genModuleInfo(File jarFile, File targetDir) {
-    delete(targetDir)
-    exec {
-        ignoreExitValue = true
-        commandLine "$javaHome/bin/jdeps",
-                '-v',
-                '--generate-module-info',
-                targetDir.path,
-                '--module-path',
-                "$javaHome/jmods/$sep$jlinkJarsDirPath",
-                jarFile.path
+jlink {
+    launcherName = project.launcherName
+    imageDir = file(imageDirPath)
+    mergedModule {
+        requires 'java.compiler'
+        requires 'java.naming'
+        requires 'java.sql'
+        requires 'java.xml'
+        requires 'java.xml.bind'
+        requires 'jdk.unsupported'
+        uses 'javax.annotation.processing.Processor'
+        provides 'javax.tools.JavaCompiler' with 'org.eclipse.jdt.internal.compiler.tool.EclipseCompiler'
+        provides 'com.fasterxml.jackson.core.JsonFactory' with 'com.fasterxml.jackson.core.JsonFactory'
+        provides 'com.fasterxml.jackson.core.ObjectCodec' with 'com.fasterxml.jackson.databind.ObjectMapper'
     }
-    def files = targetDir.listFiles()
-    return files?.length ? files[0] : genDummyModuleInfo(jarFile, targetDir)
 }
 
-File genDummyModuleInfo(File jarFile, File targetDir) {
-    def packages = new TreeSet<String>()
-    new ZipFile(jarFile).entries().each { entry ->
-        if(entry.name.endsWith('.class')) {
-            int pos = entry.name.lastIndexOf('/')
-            if(pos > 0) {
-                packages << entry.name.substring(0, pos).replace('/', '.')
-            }
-        }
-    }
-    def moduleName = getModuleName(jarFile)
-    def modinfoDir = new File(targetDir, moduleName)
-    modinfoDir.mkdirs()
-    def modInfoJava = new File(modinfoDir, 'module-info.java')
-    modInfoJava << "open module $moduleName {\n"
-    packages.each {
-        modInfoJava << "    exports $it;\n"
-    }
-
-    modInfoJava << """
-        requires java.compiler;
-        requires java.naming;
-        requires java.sql;
-        requires java.xml;
-        requires java.xml.bind;
-        requires jdk.unsupported;
-        uses javax.annotation.processing.Processor;
-        provides javax.tools.JavaCompiler with org.eclipse.jdt.internal.compiler.tool.EclipseCompiler;
-        provides com.fasterxml.jackson.core.JsonFactory with com.fasterxml.jackson.core.JsonFactory;
-        provides com.fasterxml.jackson.core.ObjectCodec with com.fasterxml.jackson.databind.ObjectMapper;
-        // provides javax.servlet.ServletContainerInitializer with ch.qos.logback.classic.servlet.LogbackServletContainerInitializer;
-    }
-    """.stripMargin()
-
-    modinfoDir
-}
-
-ext {
-    javaHome = System.getenv('JAVA_HOME')
-    sep = File.pathSeparatorChar
-    launcherName = 'copper-modular-demo'
-    mergedModuleName = 'de.scoopgmbh.module.merged'
-
-    jlinkBasePath = "$buildDir/jlinkbase"
-    nonModularJarsDirPath = "$jlinkBasePath/nonmodjars"
-    mergedJarsDirPath = "$jlinkBasePath/mergedjars"
-    jlinkJarsDirPath = "$jlinkBasePath/jlinkjars"
-    tmpJarsDirPath = "$jlinkBasePath/tmpjars"
-    tmpModuleInfoDirPath = "$jlinkBasePath/tmpmodinfo"
-    imageDirPath = "$buildDir/image"
-}
-
-def copyRuntimeJars() {
-    delete(jlinkJarsDirPath, nonModularJarsDirPath)
+tasks.jlink.doLast {
     copy {
-        into jlinkJarsDirPath
-        from configurations.runtimeClasspath.filter {hasModuleInfo(it)}
+        from('src/workflow')
+        into("$imageDirPath/bin/src/workflow")
     }
     copy {
-        into nonModularJarsDirPath
-        from configurations.runtimeClasspath.filter {!hasModuleInfo(it)}
+        from('src/main/resources')
+        into("$imageDirPath/bin")
     }
-}
-
-String genDelegatedModuleInfo(File jarFile, String targetDirPath) {
-    def moduleName = getModuleName(jarFile)
-    def modinfoDir = new File(targetDirPath, moduleName)
-    modinfoDir.mkdirs()
-    def modInfoJava = new File(modinfoDir, 'module-info.java')
-    modInfoJava << """
-        open module $moduleName {
-            requires transitive $mergedModuleName;
-        }
-        """.stripIndent()
-    modinfoDir.path
-}
-
-def createJar(String jarFilePath, String contentDirPath) {
-    file(jarFilePath).parentFile.mkdirs()
-    exec {
-        commandLine "$javaHome/bin/jar",
-                '--create',
-                '--file',
-                jarFilePath,
-                '-C',
-                contentDirPath,
-                '.'
-    }
-}
-
-def createDelegatedModule(File jarFile, String tmpDirPath, String targetDirPath) {
-    def moduleDirPath = genDelegatedModuleInfo(jarFile, tmpDirPath)
-    delete(tmpModuleInfoDirPath)
-    createManifest(tmpModuleInfoDirPath)
-    exec {
-        commandLine "$javaHome/bin/javac",
-                '-p',
-                jlinkJarsDirPath,
-                '-d',
-                tmpModuleInfoDirPath,
-                "$moduleDirPath/module-info.java"
-    }
-    def targetJarPath = new File(targetDirPath, jarFile.name).path
-    createJar(targetJarPath, tmpModuleInfoDirPath)
-}
-
-def createDelegatedModules() {
-    delete(tmpJarsDirPath)
-    new File(nonModularJarsDirPath).eachFile { jarFile ->
-        createDelegatedModule(jarFile, tmpJarsDirPath, jlinkJarsDirPath)
-    }
-}
-
-def createManifest(String targetDirPath) {
-    def mfdir = new File(targetDirPath, 'META-INF')
-    mfdir.mkdirs()
-    def mf = new File(mfdir, 'MANIFEST.MF')
-    mf.delete()
-    mf << """
-        Manifest-Version: 1.0
-        Created-By: Module Merger
-        Built-By: gradle
-        """.stripMargin()
-}
-
-def createMergedModule(Collection<File> jars) {
-    mergeUnpackedContents(jars, mergedJarsDirPath)
-    createManifest(mergedJarsDirPath)
-    def jarFilePath = "$jlinkJarsDirPath/${mergedModuleName}.jar"
-    createJar(jarFilePath, mergedJarsDirPath)
-    def modInfoDir = genModuleInfo(file(jarFilePath), file(tmpJarsDirPath))
-    compileModuleInfo(file(modInfoDir), file(jarFilePath), file(tmpModuleInfoDirPath))
-    insertModuleInfo(file(jarFilePath), file(tmpModuleInfoDirPath))
-}
-
-def mergeUnpackedContents(Collection<File> jars, String tmpDirPath) {
-    copy{
-        jars.each {from(zipTree(it))}
-        into(tmpDirPath)
-    }
-    createManifest(tmpDirPath)
-}
-
-def compileModuleInfo(File moduleInfoJavaDir, File moduleJar, File targetDir) {
-    delete(targetDir)
-    copy{
-        from(zipTree(moduleJar))
-        into(targetDir)
-    }
-    exec {
-        commandLine "$javaHome/bin/javac",
-                '-p',
-                moduleJar.parentFile,
-                '-d',
-                targetDir.path,
-                "$moduleInfoJavaDir/module-info.java"
-    }
-}
-
-def insertModuleInfo(File moduleJar, File moduleInfoClassDir) {
-    exec {
-        commandLine "$javaHome/bin/jar",
-                '--update',
-                '--file',
-                moduleJar.path,
-                '-C',
-                moduleInfoClassDir.path,
-                'module-info.class'
-    }
-}
-
-def jlink(File modjarsDir) {
-    def jlinkDir = file(imageDirPath)
-    delete(jlinkDir)
-    exec {
-        commandLine "$javaHome/bin/jlink",
-                '-v',
-                '--module-path',
-                "$javaHome/jmods/$sep${files(modjarsDir).asPath}$sep${jar.archivePath}",
-                '--add-modules', moduleName,
-                '--output', jlinkDir,
-                '--launcher', "$launcherName=$moduleName/org.copperengine.demo.jpms.TeamCreationMain"
-    }
+    adjustStartScripts()
 }
 
 def adjustStartScripts() {
@@ -337,24 +143,3 @@ def adjustStartScripts() {
         }
     }
 }
-
-task jlink(dependsOn: jar, description: 'Creates modular runtime image with jlink') {
-    group = 'build'
-    doLast {
-        delete(imageDirPath, jlinkBasePath)
-        copyRuntimeJars()
-        createMergedModule(new File(nonModularJarsDirPath).listFiles() as List)
-        createDelegatedModules()
-        jlink(file(jlinkJarsDirPath))
-        copy {
-            from('src/workflow')
-            into("$imageDirPath/bin/src/workflow")
-        }
-        copy {
-            from('src/main/resources')
-            into("$imageDirPath/bin")
-        }
-        adjustStartScripts()
-    }
-}
-
