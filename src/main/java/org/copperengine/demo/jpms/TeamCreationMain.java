@@ -18,10 +18,13 @@ package org.copperengine.demo.jpms;
 import org.copperengine.core.CopperException;
 import org.copperengine.core.DependencyInjector;
 import org.copperengine.core.common.DefaultTicketPoolManager;
+import org.copperengine.core.common.SimpleJmxExporter;
 import org.copperengine.core.common.TicketPool;
 import org.copperengine.core.common.TicketPoolManager;
+import org.copperengine.core.monitoring.LoggingStatisticCollector;
 import org.copperengine.core.tranzient.TransientEngineFactory;
 import org.copperengine.core.tranzient.TransientScottyEngine;
+import org.copperengine.core.wfrepo.FileBasedWorkflowRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +48,7 @@ public class TeamCreationMain {
 	    System.exit(0);
 	}
 
-	private void runWithDependencyInjector(DependencyInjector dependencyInjector) throws InterruptedException {
+	private void runWithDependencyInjector(DependencyInjector dependencyInjector) throws Exception {
 		// create the processing engine; configure the directory containing workflow source files and the dependency injector
 		var factory = new TransientEngineFactory() {
 			@Override
@@ -67,6 +70,7 @@ public class TeamCreationMain {
 
 		//Startup the engine
 		engine = factory.create();
+        SimpleJmxExporter exporter = startJmxExporter();
 
         //start NUMBER_OF_WORKFLOWS workflows
         for (int i = 0; i < NUMBER_OF_WORKFLOWS; i++) {
@@ -92,6 +96,23 @@ public class TeamCreationMain {
             Thread.sleep(1000);
             remaining = engine.getNumberOfWorkflowInstances();
         }
+
+        exporter.shutdown();
         engine.shutdown();
+    }
+
+    private SimpleJmxExporter startJmxExporter() throws Exception {
+        SimpleJmxExporter exporter = new SimpleJmxExporter();
+        exporter.addProcessingEngineMXBean("team-creation-engine", engine);
+        exporter.addWorkflowRepositoryMXBean("team-creation-workflow", (FileBasedWorkflowRepository)engine.getWfRepository());
+        engine.getProcessorPools().forEach(pool -> exporter.addProcessorPoolMXBean(pool.getId(), pool));
+
+        LoggingStatisticCollector statisticsCollector = new LoggingStatisticCollector();
+        statisticsCollector.start();
+        engine.setStatisticsCollector(statisticsCollector);
+        exporter.addStatisticsCollectorMXBean("team-creation-statistics", statisticsCollector);
+
+        exporter.startup();
+        return exporter;
     }
 }
