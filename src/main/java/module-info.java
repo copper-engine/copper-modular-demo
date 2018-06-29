@@ -16,8 +16,8 @@
 module org.copperengine.demo.jpms {
     requires org.copperengine.core;
 
-    requires slf4j.api;
-    requires logback.classic;
+    requires org.slf4j;
+    requires ch.qos.logback.classic;
     requires async.http.client;
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
