@@ -15,6 +15,9 @@
  */
 package org.copperengine.demo.jpms;
 
+import org.aeonbits.owner.Config;
+import org.aeonbits.owner.Config.Sources;
+import org.aeonbits.owner.ConfigFactory;
 import org.copperengine.core.CopperException;
 import org.copperengine.core.DependencyInjector;
 import org.copperengine.core.common.DefaultTicketPoolManager;
@@ -34,21 +37,43 @@ import java.util.Random;
 
 public class TeamCreationMain {
     private static final Logger logger = LoggerFactory.getLogger(TeamCreationMain.class);
-    private static int NUMBER_OF_WORKFLOWS = 200;
 
+    private final AppConfig config;
     private TransientScottyEngine engine;
     private final Random rnd = new Random();
 
+    @Sources({"file:${team.creation.config}"})
+    interface AppConfig extends Config {
+        @DefaultValue("200")
+        int workflowCount();
+
+        @DefaultValue("50")
+        long delayMillis();
+
+        @DefaultValue("1")
+        int iterationCount();
+
+        @DefaultValue("5000")
+        long iterationDelayMillis();
+    }
+
+    public TeamCreationMain(AppConfig config) {
+        this.config = config;
+    }
+
 	public static void main(String[] args) throws Exception {
-	    long delayMillis = 50;
-	    if(args.length > 0) {
-	        delayMillis = Long.parseLong(args[0]);
-        }
-        new TeamCreationMain().runWithDependencyInjector(new DefaultDependencyInjector(delayMillis));
+        System.getProperties().putIfAbsent("team.creation.config", "application.properties");
+        AppConfig config = ConfigFactory.create(AppConfig.class);
+        new TeamCreationMain(config).run();
 	    System.exit(0);
 	}
 
+	private void run() throws Exception {
+        runWithDependencyInjector(new DefaultDependencyInjector(config.delayMillis()));
+    }
+
 	private void runWithDependencyInjector(DependencyInjector dependencyInjector) throws Exception {
+        int workflowCount = config.workflowCount();
 		// create the processing engine; configure the directory containing workflow source files and the dependency injector
 		var factory = new TransientEngineFactory() {
 			@Override
@@ -63,7 +88,7 @@ public class TeamCreationMain {
             @Override
             protected TicketPoolManager createTicketPoolManager() {
                 DefaultTicketPoolManager tpManager = new DefaultTicketPoolManager();
-                tpManager.setTicketPools(Collections.singletonList(new TicketPool(DefaultTicketPoolManager.DEFAULT_POOL_ID, NUMBER_OF_WORKFLOWS)));
+                tpManager.setTicketPools(Collections.singletonList(new TicketPool(DefaultTicketPoolManager.DEFAULT_POOL_ID, workflowCount)));
                 return tpManager;
             }
         };
@@ -72,29 +97,35 @@ public class TeamCreationMain {
 		engine = factory.create();
         SimpleJmxExporter exporter = startJmxExporter();
 
-        //start NUMBER_OF_WORKFLOWS workflows
-        for (int i = 0; i < NUMBER_OF_WORKFLOWS; i++) {
-            try {
-                boolean femaleLeader = rnd.nextBoolean();
-                int teamSize = 2 + rnd.nextInt(3);
-                var request = new TeamCreationRequest(femaleLeader, teamSize);
-                engine.run("TeamCreationWorkFlow", request);
-            } catch (CopperException e) {
-                logger.error("copper error: ", e);
+        for(int k = 0; k < config.iterationCount(); k++) {
+            //start workflowCount workflows
+            for (int i = 0; i < workflowCount; i++) {
+                try {
+                    boolean femaleLeader = rnd.nextBoolean();
+                    int teamSize = 2 + rnd.nextInt(3);
+                    var request = new TeamCreationRequest(femaleLeader, teamSize);
+                    engine.run("TeamCreationWorkFlow", request);
+                } catch (CopperException e) {
+                    logger.error("copper error: ", e);
+                }
             }
-        }
-        logger.info("Running {} workflows...", NUMBER_OF_WORKFLOWS);
+            logger.info("Running {} workflows...", workflowCount);
 
-        // wait for all workflow instances to finish
-        int oldRemaining = NUMBER_OF_WORKFLOWS;
-        int remaining = engine.getNumberOfWorkflowInstances();
-        while(remaining > 0) {
-            if(remaining != oldRemaining) {
-                logger.info("{} workflows remaining...", remaining);
-                oldRemaining = remaining;
+            // wait for all workflow instances to finish
+            int oldRemaining = workflowCount;
+            int remaining = engine.getNumberOfWorkflowInstances();
+            while(remaining > 0) {
+                if(remaining != oldRemaining) {
+                    logger.info("{} workflows remaining...", remaining);
+                    oldRemaining = remaining;
+                }
+                Thread.sleep(1000);
+                remaining = engine.getNumberOfWorkflowInstances();
             }
-            Thread.sleep(1000);
-            remaining = engine.getNumberOfWorkflowInstances();
+            if(k < config.iterationCount() - 1) {
+                logger.info("Waiting {} ms. before starting the next iteration...", config.iterationDelayMillis());
+                Thread.sleep(config.iterationDelayMillis());
+            }
         }
 
         exporter.shutdown();

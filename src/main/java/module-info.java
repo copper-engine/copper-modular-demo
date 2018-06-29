@@ -21,6 +21,8 @@ module org.copperengine.demo.jpms {
     requires async.http.client;
     requires com.fasterxml.jackson.core;
     requires com.fasterxml.jackson.databind;
+    requires owner;
+    requires java.management;
 
     exports org.copperengine.demo.jpms;
 }

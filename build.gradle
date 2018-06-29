@@ -1,7 +1,7 @@
 plugins {
     id 'idea'
     id "com.github.hierynomus.license" version "0.12.1"
-    id "org.beryx.jlink" version "1.0.0"
+    id "org.beryx.jlink" version "1.0.1"
 }
 
 repositories {
@@ -49,6 +49,7 @@ dependencies {
     compile 'com.fasterxml.jackson.core:jackson-core:2.9.5'
     compile 'com.fasterxml.jackson.core:jackson-databind:2.9.5'
 
+    compile 'org.aeonbits.owner:owner:1.0.10'
     compile 'org.slf4j:slf4j-api:1.7.25'
     compile 'ch.qos.logback:logback-classic:1.2.3'
 
@@ -100,6 +101,9 @@ jlink {
         requires 'java.sql'
         requires 'java.xml'
         requires 'java.xml.bind'
+        requires 'java.desktop'
+        requires 'java.management'
+        requires 'jdk.management.agent'
         requires 'jdk.unsupported'
         uses 'javax.annotation.processing.Processor'
         provides 'javax.tools.JavaCompiler' with 'org.eclipse.jdt.internal.compiler.tool.EclipseCompiler'
