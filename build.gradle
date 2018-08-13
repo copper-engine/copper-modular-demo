@@ -12,7 +12,8 @@ ext {
     copperVersion = '5.0.0-alpha4'
     moduleName = 'org.copperengine.demo.jpms'
     launcherName = 'copper-modular-demo'
-    imageDirPath = "$buildDir/image"
+    imageDirPath = "$buildDir/${launcherName}-image"
+    imageZipPath = "$buildDir/image-zip/${launcherName}-image.zip"
 }
 
 apply plugin: 'application'
@@ -97,6 +98,7 @@ tasks.withType(Javadoc) {
 jlink {
     launcherName = project.launcherName
     imageDir = file(imageDirPath)
+    imageZip = file(imageZipPath)
     mergedModule {
         requires 'org.slf4j'
         requires 'java.compiler'
