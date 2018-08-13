@@ -1,7 +1,7 @@
 plugins {
     id 'idea'
     id "com.github.hierynomus.license" version "0.12.1"
-    id "org.beryx.jlink" version "1.0.2"
+    id "org.beryx.jlink" version "1.1.0"
 }
 
 repositories {
@@ -9,7 +9,7 @@ repositories {
 }
 
 ext {
-    copperVersion = '5.0.0-alpha3'
+    copperVersion = '5.0.0-alpha4'
     moduleName = 'org.copperengine.demo.jpms'
     launcherName = 'copper-modular-demo'
     imageDirPath = "$buildDir/image"
@@ -113,18 +113,17 @@ jlink {
         provides 'com.fasterxml.jackson.core.JsonFactory' with 'com.fasterxml.jackson.core.JsonFactory'
         provides 'com.fasterxml.jackson.core.ObjectCodec' with 'com.fasterxml.jackson.databind.ObjectMapper'
     }
-}
-
-tasks.jlink.doLast {
-    copy {
-        from('src/workflow')
-        into("$imageDirPath/bin/src/workflow")
+    beforeZip {
+        copy {
+            from('src/workflow')
+            into("$imageDirPath/bin/src/workflow")
+        }
+        copy {
+            from('src/main/resources')
+            into("$imageDirPath/bin")
+        }
+        adjustStartScripts()
     }
-    copy {
-        from('src/main/resources')
-        into("$imageDirPath/bin")
-    }
-    adjustStartScripts()
 }
 
 def adjustStartScripts() {
