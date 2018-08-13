@@ -8,6 +8,16 @@ install:
   - . ./install-jdk.sh -F 10 -L BCL
   - chmod a+x ./gradlew
 
+deploy:
+  provider: pages
+  skip-cleanup: true
+  github-token: $GITHUB_TOKEN
+  keep-history: false
+  target-branch: images
+  local-dir: build/image-zip
+  on:
+    branch: master
+
 cache:
   directories:
     - $HOME/.gradle
