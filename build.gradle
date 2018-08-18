@@ -132,9 +132,10 @@ def adjustStartScripts() {
     ["$launcherName", "${launcherName}.bat"].each { script ->
         def scriptFile = new File("$imageDirPath/bin/$script")
         if(scriptFile.file) {
+            def quotes = script.endsWith('.bat') ? '' : '"'
             def newText = scriptFile.text
             newText = newText.replace('JLINK_VM_OPTIONS=',
-                    'JLINK_VM_OPTIONS=-Dio.netty.tryReflectionSetAccessible=false -Dlogback.configurationFile=./logback.xml -Djava.util.logging.config.file=logging.properties -Dfile.encoding=UTF-8 -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.ssl=false')
+                    "JLINK_VM_OPTIONS=${quotes}-Dio.netty.tryReflectionSetAccessible=false -Dlogback.configurationFile=./logback.xml -Djava.util.logging.config.file=logging.properties -Dfile.encoding=UTF-8 -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.ssl=false${quotes}")
             if(script.endsWith('.bat')) {
                 // temporary set codepage 65001 in order to be able to use UTF-8 encoding
                 newText = newText.replace('@echo off', '''
