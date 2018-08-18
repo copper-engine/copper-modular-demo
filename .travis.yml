@@ -4,8 +4,8 @@ sudo: false
 
 before_install: wget https://raw.githubusercontent.com/sormuras/bach/master/install-jdk.sh
 
-install: 
-  - . ./install-jdk.sh -F 10 -L BCL
+install:
+  - . ./install-jdk.sh -F 11 -L BCL
   - chmod a+x ./gradlew
 
 deploy:
@@ -23,4 +23,3 @@ cache:
     - $HOME/.gradle
 
 script: ./gradlew --info --stacktrace build jlink
-
