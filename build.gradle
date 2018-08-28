@@ -1,7 +1,7 @@
 plugins {
     id 'idea'
     id "com.github.hierynomus.license" version "0.12.1"
-    id "org.beryx.jlink" version "1.2.0"
+    id "org.beryx.jlink" version "1.4.2"
 }
 
 repositories {
@@ -9,7 +9,7 @@ repositories {
 }
 
 ext {
-    copperVersion = '5.0.0-rc1'
+    copperVersion = '5.0.0'
     moduleName = 'org.copperengine.demo.jpms'
     launcherName = 'copper-modular-demo'
     imageDirPath = "$buildDir/${launcherName}-image"
@@ -115,7 +115,10 @@ jlink {
         provides 'com.fasterxml.jackson.core.ObjectCodec' with 'com.fasterxml.jackson.databind.ObjectMapper'
     }
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
-    beforeZip {
+}
+
+tasks.jlink {
+    doLast {
         copy {
             from('src/workflow')
             into("$imageDirPath/bin/src/workflow")
@@ -129,7 +132,8 @@ jlink {
 }
 
 def adjustStartScripts() {
-    ["$launcherName", "${launcherName}.bat"].each { script ->
+    def scriptName = project.launcherName
+    ["$scriptName ", "${scriptName }.bat"].each { script ->
         def scriptFile = new File("$imageDirPath/bin/$script")
         if(scriptFile.file) {
             def quotes = script.endsWith('.bat') ? '' : '"'
