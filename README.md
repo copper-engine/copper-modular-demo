@@ -36,13 +36,13 @@ The application implements the following workflow:
 - display the team
 
 A COPPER workflow will be created and executed for each team to be created.
-The number of workflows (teams) to be created can be configured in [application.properties](blob/master/src/main/resources/application.properties).
+The number of workflows (teams) to be created can be configured in [application.properties](src/main/resources/application.properties).
 
 The [uinames.com](http://uinames.com) server cannot handle a large number of requests simultaneously.
 Under heavy load, it sends an error response or sometimes even no response at all.
 For our demo application this is actually a good thing, because it allows us to test error and timeout scenarios.
 
-The parameter `delayMillis` in [application.properties](blob/master/src/main/resources/application.properties)
+The parameter `delayMillis` in [application.properties](src/main/resources/application.properties)
 allows throttling the recruiting requests.
 In this way, you can control the error frequency.
 But please do not abuse the [uinames.com](http://uinames.com) server by running the application with low values of `delayMillis` for long periods!
