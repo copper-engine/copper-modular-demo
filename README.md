@@ -54,6 +54,10 @@ Unpack the archive, go to the `copper-modular-demo-image/bin` directory and star
 The program will display the teams it creates.
 You can change the runtime parameters by editing the `bin/application.properties` file.
 
+Click on the image below to see a sample run of the application.
+
+<a href="https://github.com/copper-engine/copper-modular-demo/raw/master/doc/copper-modular.gif"><img src="https://github.com/copper-engine/copper-modular-demo/raw/master/doc/copper-modular-thumb.png"></a>
+
 As mentioned before, some of the calls to [uinames.com](http://uinames.com) may fail.
 As a consequence, the program creates fewer teams and/or teams with fewer members than requested.
 By default, the application doesn't print information about these failed calls, 
