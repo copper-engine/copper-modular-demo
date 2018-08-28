@@ -4,8 +4,8 @@
 
 ## copper-modular-demo
 
-A demo project that shows how to build a modular application with COPPER 5.0.
-The Gradle script allows creating a custom runtime image of this application.  
+A demo project that shows how to build a modular application with Java 11 and COPPER 5.0.
+The Gradle script allows creating a custom runtime image of this application.
 
 The code also illustrates how COPPER 5.0 workflows support Java 10 features such as local-variable type inference
 (look for the `var` keyword).
@@ -30,7 +30,7 @@ We use [uinames.com](http://uinames.com) to emulate the recruiting service.
 For each team to be created we specify its size and the gender of its leader.
 Therefore, the workflow data contains two fields: `int teamSize`and `boolean femaleLeader`.
 
-The application implements the following workflow:
+The application implements the following [workflow](src/workflow/java/org/copperengine/demo/jpms/workflow/TeamCreationWorkflow.java):
 - appoint a team leader with the gender implied by `femaleLeader`
 - recruit (in parallel) `teamSize` members from the same region as the leader
 - display the team
@@ -47,11 +47,26 @@ allows throttling the recruiting requests.
 In this way, you can control the error frequency.
 But please do not abuse the [uinames.com](http://uinames.com) server by running the application with low values of `delayMillis` for long periods!
 
+### Quick start
+From the [releases page](https://github.com/copper-engine/copper-modular-demo/releases) download the archived custom runtime image for your operating system.
+Unpack the archive, go to the `copper-modular-demo-image/bin` directory and start the `copper-modular-demo` script.  
+
+The program will display the teams it creates.
+You can change the runtime parameters by editing the `bin/application.properties` file.
+
+As mentioned before, some of the calls to [uinames.com](http://uinames.com) may fail.
+As a consequence, the program creates fewer teams and/or teams with fewer members than requested.
+By default, the application doesn't print information about these failed calls, 
+but this can be changed by editing the `bin/logback.xml` file.
+(Set, for example, the level of `org.copperengine.demo` to `debug`.)
+
+### Creating a custom runtime image
+
+Gradle must use Java 11 in order to be able to build the project. 
 To create the custom runtime image execute:
 
 ```
 ./gradlew jlink
 ```
 
-After that, you will find the runtime image in the `build/copper-modular-demo-image` directory.
-
+The runtime image will be available in the `build/copper-modular-demo-image` directory.
