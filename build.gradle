@@ -9,7 +9,7 @@ repositories {
 }
 
 ext {
-    copperVersion = '5.0.0'
+    copperVersion = '5.0.1'
     moduleName = 'org.copperengine.demo.jpms'
     launcherName = 'copper-modular-demo'
     imageDirPath = "$buildDir/${launcherName}-image"
