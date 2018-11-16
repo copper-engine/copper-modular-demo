@@ -6,8 +6,12 @@ buildscript {
 }
 plugins {
     id 'idea'
+    id 'eclipse'
+    id 'application'
+    id 'java-library'
     id "com.github.hierynomus.license" version "0.12.1"
-    id "org.beryx.jlink" version "2.1.4"
+    id "org.beryx.jlink" version "2.1.5"
+    id "org.javamodularity.moduleplugin" version "1.1.1"
 }
 
 repositories {
@@ -17,16 +21,11 @@ repositories {
 ext {
     copperVersion = '5.0.1'
     moduleName = 'org.copperengine.demo.jpms'
+    mainClass = 'org.copperengine.demo.jpms.TeamCreationMain'
     launcherName = 'copper-modular-demo'
     imageDirPath = "$buildDir/${launcherName}-image"
     imageZipPath = "$buildDir/image-zip/${launcherName}-image.zip"
 }
-
-apply plugin: 'application'
-apply plugin: 'java-library'
-apply plugin: 'eclipse'
-apply plugin: 'idea'
-apply plugin: 'com.github.hierynomus.license'
 
 sourceCompatibility = 11
 targetCompatibility = 11
@@ -71,11 +70,11 @@ dependencies {
     runtime 'org.eclipse.jdt:ecj:3.13.102'
 }
 
-mainClassName = 'org.copperengine.demo.jpms.TeamCreationMain'
+mainClassName = "$moduleName/$mainClass"
 jar {
     manifest {
         attributes 'Implementation-Title': "copper-demo-jpms",
-                'Main-Class': mainClassName
+                'Main-Class': mainClass
     }
 }
 
@@ -91,15 +90,6 @@ task javadocJar(type: Jar, dependsOn: classes) {
 
 artifacts {
     archives(sourcesJar, javadocJar)
-}
-
-javadoc {
-    options.addStringOption('-module-path', classpath.asPath)
-}
-
-compileJava {
-    options.compilerArgs = ['--module-path', classpath.asPath]
-    classpath = files()
 }
 
 tasks.withType(Javadoc) {
