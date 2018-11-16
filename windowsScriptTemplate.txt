@@ -1,0 +1,8 @@
+@echo off
+setlocal ENABLEDELAYEDEXPANSION
+for /F "tokens=* USEBACKQ" %%F in (`chcp`) do (set ORIGINAL_CODEPAGE=%%F)
+set ORIGINAL_CODEPAGE=%ORIGINAL_CODEPAGE:*: =%
+set ORIGINAL_CODEPAGE=%ORIGINAL_CODEPAGE:.=%
+chcp 65001 > nul
+set DIR=%~dp0
+pushd "%DIR%" & "%DIR%\\java" ${jvmArgs} -m ${moduleName}/${mainClassName} ${args} %* & popd

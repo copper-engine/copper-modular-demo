@@ -1,7 +1,13 @@
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+}
 plugins {
     id 'idea'
     id "com.github.hierynomus.license" version "0.12.1"
-    id "org.beryx.jlink" version "1.4.2"
+    id "org.beryx.jlink" version "2.1.4"
 }
 
 repositories {
@@ -43,6 +49,12 @@ license {
 }
 
 dependencies {
+    compile "org.ow2.asm:asm:6.2"
+    compile "org.ow2.asm:asm-commons:6.2"
+    compile "org.ow2.asm:asm-tree:6.2"
+    compile "org.ow2.asm:asm-util:6.2"
+    compile "org.ow2.asm:asm-analysis:6.2"
+
     compile "org.copper-engine:copper-coreengine:$copperVersion"
     compile "org.copper-engine:copper-jmx-interface:$copperVersion"
 
@@ -96,7 +108,6 @@ tasks.withType(Javadoc) {
 
 
 jlink {
-    launcherName = project.launcherName
     imageDir = file(imageDirPath)
     imageZip = file(imageZipPath)
     mergedModule {
@@ -115,6 +126,21 @@ jlink {
         provides 'com.fasterxml.jackson.core.ObjectCodec' with 'com.fasterxml.jackson.databind.ObjectMapper'
     }
     options = ['--strip-debug', '--compress', '2', '--no-header-files', '--no-man-pages']
+    launcher {
+      name = project.launcherName
+      jvmArgs = [
+        '-Dio.netty.tryReflectionSetAccessible=false',
+        '-Dlogback.configurationFile=./logback.xml',
+        '-Djava.util.logging.config.file=logging.properties',
+        '-Dfile.encoding=UTF-8',
+        '-Dcom.sun.management.jmxremote=true',
+        '-Dcom.sun.management.jmxremote.authenticate=false',
+        '-Dcom.sun.management.jmxremote.port=1099',
+        '-Dcom.sun.management.jmxremote.ssl=false'
+      ]
+      windowsScriptTemplate = file('windowsScriptTemplate.txt')
+    }
+
 }
 
 tasks.jlink {
@@ -126,33 +152,6 @@ tasks.jlink {
         copy {
             from('src/main/resources')
             into("$imageDirPath/bin")
-        }
-        adjustStartScripts()
-    }
-}
-
-def adjustStartScripts() {
-    def scriptName = project.launcherName
-    ["$scriptName ", "${scriptName }.bat"].each { script ->
-        def scriptFile = new File("$imageDirPath/bin/$script")
-        if(scriptFile.file) {
-            def quotes = script.endsWith('.bat') ? '' : '"'
-            def newText = scriptFile.text
-            newText = newText.replace('JLINK_VM_OPTIONS=',
-                    "JLINK_VM_OPTIONS=${quotes}-Dio.netty.tryReflectionSetAccessible=false -Dlogback.configurationFile=./logback.xml -Djava.util.logging.config.file=logging.properties -Dfile.encoding=UTF-8 -Dcom.sun.management.jmxremote=true -Dcom.sun.management.jmxremote.authenticate=false -Dcom.sun.management.jmxremote.port=1099 -Dcom.sun.management.jmxremote.ssl=false${quotes}")
-            if(script.endsWith('.bat')) {
-                // temporary set codepage 65001 in order to be able to use UTF-8 encoding
-                newText = newText.replace('@echo off', '''
-                @echo off
-                setlocal ENABLEDELAYEDEXPANSION
-                for /F "tokens=* USEBACKQ" %%F in (`chcp`) do (set ORIGINAL_CODEPAGE=%%F)
-                set ORIGINAL_CODEPAGE=%ORIGINAL_CODEPAGE:*: =%
-                set ORIGINAL_CODEPAGE=%ORIGINAL_CODEPAGE:.=%
-                chcp 65001 > nul
-            '''.stripIndent())
-                newText += '\nchcp %ORIGINAL_CODEPAGE% > nul\n'
-            }
-            scriptFile.newWriter().withWriter {w -> w << newText}
         }
     }
 }
